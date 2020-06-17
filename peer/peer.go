@@ -1,5 +1,6 @@
 // Copyright (c) 2013-2018 The btcsuite developers
 // Copyright (c) 2016-2018 The Decred developers
+// Copyright (c) 2020 The Blocknet developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -28,7 +29,7 @@ import (
 
 const (
 	// MaxProtocolVersion is the max protocol version the peer supports.
-	MaxProtocolVersion = wire.FeeFilterVersion
+	MaxProtocolVersion = wire.ProtocolVersion
 
 	// DefaultTrickleInterval is the min time between attempts to send an
 	// inv message to a peer.
@@ -200,6 +201,25 @@ type MessageListeners struct {
 	// OnSendHeaders is invoked when a peer receives a sendheaders bitcoin
 	// message.
 	OnSendHeaders func(p *Peer, msg *wire.MsgSendHeaders)
+
+	// OnSnodeRegistration is invoked when a peer receives a snode registration.
+	OnSnodeRegistration func(p *Peer, msg *wire.MsgSnodeRegistration)
+
+	// OnSnodePing is invoked when a peer receives a snode ping.
+	OnSnodePing func(p *Peer, msg *wire.MsgSnodePing)
+
+	// OnSnodeList is invoked when a peer receives a snode list request.
+	OnSnodeList func(p *Peer, msg *wire.MsgSnodeList)
+
+	// OnSnodeListPing is invoked when a peer receives a snode ping from a snode
+	// list request.
+	OnSnodeListPing func(p *Peer, msg *wire.MsgSnodeListPing)
+
+	// OnXBridge is invoked when a peer receives an xbridge message.
+	OnXBridge func(p *Peer, msg *wire.MsgXBridge)
+
+	// OnXRouter is invoked when a peer receives an xrouter message.
+	OnXRouter func(p *Peer, msg *wire.MsgXRouter)
 
 	// OnRead is invoked when a peer receives a bitcoin message.  It
 	// consists of the number of bytes read, the message, and whether or not
@@ -1518,6 +1538,36 @@ out:
 
 			if p.cfg.Listeners.OnSendHeaders != nil {
 				p.cfg.Listeners.OnSendHeaders(p, msg)
+			}
+
+		case *wire.MsgSnodeRegistration:
+			if p.cfg.Listeners.OnSnodeRegistration != nil {
+				p.cfg.Listeners.OnSnodeRegistration(p, msg)
+			}
+
+		case *wire.MsgSnodePing:
+			if p.cfg.Listeners.OnSnodePing != nil {
+				p.cfg.Listeners.OnSnodePing(p, msg)
+			}
+
+		case *wire.MsgSnodeList:
+			if p.cfg.Listeners.OnSnodeList != nil {
+				p.cfg.Listeners.OnSnodeList(p, msg)
+			}
+
+		case *wire.MsgSnodeListPing:
+			if p.cfg.Listeners.OnSnodeListPing != nil {
+				p.cfg.Listeners.OnSnodeListPing(p, msg)
+			}
+
+		case *wire.MsgXBridge:
+			if p.cfg.Listeners.OnXBridge != nil {
+				p.cfg.Listeners.OnXBridge(p, msg)
+			}
+
+		case *wire.MsgXRouter:
+			if p.cfg.Listeners.OnXRouter != nil {
+				p.cfg.Listeners.OnXRouter(p, msg)
 			}
 
 		default:

@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The Blocknet developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -57,6 +58,12 @@ const (
 	CmdCFilter      = "cfilter"
 	CmdCFHeaders    = "cfheaders"
 	CmdCFCheckpt    = "cfcheckpt"
+	CmdSnodeReg     = "snr"
+	CmdSnodePing    = "snp"
+	CmdSnodeList    = "snl"
+	CmdSnodeListPing= "snlp"
+	CmdXBridge      = "xbridge"
+	CmdXRouter      = "xrouter"
 )
 
 // MessageEncoding represents the wire message encoding format to be used.
@@ -179,6 +186,24 @@ func makeEmptyMessage(command string) (Message, error) {
 
 	case CmdCFCheckpt:
 		msg = &MsgCFCheckpt{}
+
+	case CmdSnodeReg:
+		msg = NewMsgSnodeRegistration()
+
+	case CmdSnodeList:
+		msg = NewMsgSnodeList()
+
+	case CmdSnodePing:
+		msg = NewMsgSnodePing()
+
+	case CmdSnodeListPing:
+		msg = NewMsgSnodeListPing()
+
+	case CmdXBridge:
+		msg = NewMsgXBridge()
+
+	case CmdXRouter:
+		msg = NewMsgXRouter()
 
 	default:
 		return nil, fmt.Errorf("unhandled command [%s]", command)

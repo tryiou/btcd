@@ -1,4 +1,5 @@
 // Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2020 The Blocknet developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -13,7 +14,7 @@ import (
 // XXX pedro: we will probably need to bump this.
 const (
 	// ProtocolVersion is the latest protocol version this package supports.
-	ProtocolVersion uint32 = 70013
+	ProtocolVersion uint32 = 70713
 
 	// MultipleAddressVersion is the protocol version which added multiple
 	// addresses per message (pver >= MultipleAddressVersion).
@@ -86,6 +87,10 @@ const (
 	// SFNode2X is a flag used to indicate a peer is running the Segwit2X
 	// software.
 	SFNode2X
+
+	// SFNodeList is a flag used to indicate a peer can share the service
+	// node list.
+	SFNodeList ServiceFlag = 1 << 20
 )
 
 // Map of service flags back to their constant names for pretty printing.
@@ -98,6 +103,7 @@ var sfStrings = map[ServiceFlag]string{
 	SFNodeBit5:    "SFNodeBit5",
 	SFNodeCF:      "SFNodeCF",
 	SFNode2X:      "SFNode2X",
+	SFNodeList:    "SFNodeList",
 }
 
 // orderedSFStrings is an ordered list of service flags from highest to
@@ -111,6 +117,7 @@ var orderedSFStrings = []ServiceFlag{
 	SFNodeBit5,
 	SFNodeCF,
 	SFNode2X,
+	SFNodeList,
 }
 
 // String returns the ServiceFlag in human-readable form.
@@ -147,13 +154,13 @@ type BitcoinNet uint32
 // better idea to simply disconnect clients that are misbehaving over TCP.
 const (
 	// MainNet represents the main bitcoin network.
-	MainNet BitcoinNet = 0xd9b4bef9
+	MainNet BitcoinNet = 0xa3a2a0a1
 
 	// TestNet represents the regression test network.
-	TestNet BitcoinNet = 0xdab5bffa
+	TestNet BitcoinNet = 0xac7ecfa1
 
-	// TestNet3 represents the test network (version 3).
-	TestNet3 BitcoinNet = 0x0709110b
+	// TestNet3 represents the test network (blocknet testnet version 5).
+	TestNet3 BitcoinNet = 0xba657645
 
 	// SimNet represents the simulation test network.
 	SimNet BitcoinNet = 0x12141c16
@@ -164,7 +171,7 @@ const (
 var bnStrings = map[BitcoinNet]string{
 	MainNet:  "MainNet",
 	TestNet:  "TestNet",
-	TestNet3: "TestNet3",
+	TestNet3: "TestNet5",
 	SimNet:   "SimNet",
 }
 
