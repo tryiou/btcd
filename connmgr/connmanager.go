@@ -1,4 +1,5 @@
 // Copyright (c) 2016 The btcsuite developers
+// Copyright (c) 2020 The Blocknet developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -183,6 +184,8 @@ type ConnManager struct {
 	failedAttempts uint64
 	requests       chan interface{}
 	quit           chan struct{}
+	conns          map[string]uint64
+	mu             sync.Mutex
 }
 
 // handleFailedConn handles a connection failed due to a disconnect or any
@@ -397,7 +400,14 @@ func (cm *ConnManager) NewConnReq() {
 		return
 	}
 
+	cm.mu.Lock()
+	if _, ok := cm.conns[addr.String()]; ok {
+		cm.mu.Unlock()
+		return // skip already used addresses
+	}
 	c.Addr = addr
+	cm.conns[addr.String()] = c.id
+	cm.mu.Unlock()
 
 	cm.Connect(c)
 }
@@ -406,12 +416,14 @@ func (cm *ConnManager) NewConnReq() {
 // connection request.
 func (cm *ConnManager) Connect(c *ConnReq) {
 	if atomic.LoadInt32(&cm.stop) != 0 {
+		removeConn(cm, c)
 		return
 	}
 
 	// During the time we wait for retry there is a chance that
 	// this connection was already cancelled
 	if c.State() == ConnCanceled {
+		removeConn(cm, c)
 		log.Debugf("Ignoring connect for canceled connreq=%v", c)
 		return
 	}
@@ -427,6 +439,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		select {
 		case cm.requests <- registerPending{c, done}:
 		case <-cm.quit:
+			removeConn(cm, c)
 			return
 		}
 
@@ -435,6 +448,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		select {
 		case <-done:
 		case <-cm.quit:
+			removeConn(cm, c)
 			return
 		}
 	}
@@ -447,6 +461,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		case cm.requests <- handleFailed{c, err}:
 		case <-cm.quit:
 		}
+		removeConn(cm, c)
 		return
 	}
 
@@ -461,6 +476,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 // duration.
 func (cm *ConnManager) Disconnect(id uint64) {
 	if atomic.LoadInt32(&cm.stop) != 0 {
+		removeConnID(cm, id)
 		return
 	}
 
@@ -468,6 +484,7 @@ func (cm *ConnManager) Disconnect(id uint64) {
 	case cm.requests <- handleDisconnected{id, true}:
 	case <-cm.quit:
 	}
+	removeConnID(cm, id)
 }
 
 // Remove removes the connection corresponding to the given connection id from
@@ -477,6 +494,7 @@ func (cm *ConnManager) Disconnect(id uint64) {
 // that hasn't yet succeeded.
 func (cm *ConnManager) Remove(id uint64) {
 	if atomic.LoadInt32(&cm.stop) != 0 {
+		removeConnID(cm, id)
 		return
 	}
 
@@ -484,6 +502,7 @@ func (cm *ConnManager) Remove(id uint64) {
 	case cm.requests <- handleDisconnected{id, false}:
 	case <-cm.quit:
 	}
+	removeConnID(cm, id)
 }
 
 // listenHandler accepts incoming connections on a given listener.  It must be
@@ -572,6 +591,36 @@ func New(cfg *Config) (*ConnManager, error) {
 		cfg:      *cfg, // Copy so caller can't mutate
 		requests: make(chan interface{}),
 		quit:     make(chan struct{}),
+		conns:    make(map[string]uint64),
 	}
 	return &cm, nil
+}
+
+// HasConnection returns true if the specified address is
+// used by a connection.
+func (cm *ConnManager) HasConnection(addr string) bool {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	_, ok := cm.conns[addr]
+	return ok
+}
+
+// removeConn removes the specified connection request so
+// that another connection request to the same peer can proceed.
+func removeConn(cm *ConnManager, cu *ConnReq) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	delete(cm.conns, cu.Addr.String())
+}
+// removeConnID removes the specified connection request by id
+// so that another connection request to the same peer can proceed.
+func removeConnID(cm *ConnManager, id uint64) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	for k, v := range cm.conns {
+		if v == id {
+			delete(cm.conns, k)
+			break
+		}
+	}
 }
